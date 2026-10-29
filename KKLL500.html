@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#070b1d">
+<title>NEON DASH | رکوردشکن</title>
+<style>
+:root {
+  --bg: #070b1d;
+  --panel: #101936;
+  --cyan: #49f5ff;
+  --pink: #ff4fd8;
+  --gold: #ffe66d;
+  --white: #f4f7ff;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--white); }
+body {
+  font-family: Tahoma, Arial, sans-serif;
+  background:
+    radial-gradient(circle at 15% 10%, #192653 0, transparent 35%),
+    radial-gradient(circle at 90% 85%, #341447 0, transparent 30%),
+    var(--bg);
+  overflow-x: hidden;
+  touch-action: manipulation;
+}
+button { font: inherit; cursor: pointer; }
+button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
+.shell { width: min(100%, 920px); margin: 0 auto; padding: 14px; }
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.brand { font-size: clamp(21px, 5vw, 34px); font-weight: 1000; letter-spacing: 1px; }
+.brand span { color: var(--cyan); text-shadow: 0 0 16px #49f5ff88; }
+.kicker { font-size: 10px; color: #a6b5e5; letter-spacing: 3px; margin-bottom: 4px; }
+.record-chip { border: 1px solid #49f5ff66; background: #49f5ff12; padding: 9px 12px; border-radius: 14px; text-align: center; min-width: 90px; }
+.record-chip small { display: block; color: #a6b5e5; font-size: 11px; }
+.record-chip strong { color: var(--gold); font-size: 23px; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 14px 0; }
+.stat { background: #101936d9; border: 1px solid #ffffff16; border-radius: 13px; text-align: center; padding: 10px 4px; box-shadow: inset 0 1px #ffffff08; }
+.stat small { display: block; color: #9eacd8; font-size: 11px; margin-bottom: 4px; }
+.stat strong { font-size: clamp(17px, 4vw, 24px); }
+.game-frame { position: relative; border: 1px solid #49f5ff66; border-radius: 18px; overflow: hidden; box-shadow: 0 0 35px #00d9ff16; background: #080d20; }
+canvas { display: block; width: 100%; height: min(58vh, 460px); min-height: 270px; touch-action: none; }
+.overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; background: #05091bc9; backdrop-filter: blur(5px); }
+.overlay.hidden { display: none; }
+.overlay h1 { margin: 0 0 8px; font-size: clamp(28px, 7vw, 48px); color: var(--cyan); text-shadow: 0 0 22px #49f5ff66; }
+.overlay p { max-width: 440px; color: #d1daf9; line-height: 1.9; margin: 5px 0 18px; font-size: 14px; }
+.primary { border: 0; border-radius: 13px; padding: 13px 25px; color: #06121e; font-weight: 900; background: linear-gradient(100deg, var(--cyan), #a6ffef); box-shadow: 0 0 22px #49f5ff38; }
+.primary:active { transform: scale(.98); }
+.controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+.control-btn { min-height: 54px; border-radius: 14px; border: 1px solid #ffffff25; color: white; background: linear-gradient(145deg, #182449, #10162c); font-weight: 900; }
+.control-btn span { color: var(--cyan); font-size: 19px; margin-left: 7px; }
+.control-btn:active { background: #263966; }
+.action-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.action-row button { flex: 1; min-width: 100px; border: 1px solid #ffffff20; color: #e8edff; background: #ffffff0c; border-radius: 11px; padding: 10px; font-size: 12px; }
+.info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+.info { background: #ffffff08; border: 1px solid #ffffff12; padding: 11px; border-radius: 12px; }
+.info b { display: block; color: var(--gold); font-size: 13px; margin-bottom: 5px; }
+.info p { margin: 0; color: #aeb9db; font-size: 11px; line-height: 1.8; }
+.footer { color: #7582aa; font-size: 10px; text-align: center; padding: 15px 0 4px; }
+#toast { min-height: 24px; text-align: center; color: var(--gold); font-size: 12px; padding: 7px 0; }
+@media (max-width: 520px) {
+  .shell { padding: 10px; }
+  .stats { gap: 5px; }
+  .stat { padding: 9px 2px; }
+  .info-grid { grid-template-columns: 1fr; }
+  .info { display: flex; align-items: center; gap: 10px; }
+  .info b { min-width: 100px; margin: 0; }
+  .info p { flex: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; }
+}
+</style>
+</head>
+<body>
+<main class="shell">
+  <header class="topbar">
+    <div>
+      <div class="kicker">ARCADE GAME • TOUCH READY</div>
+      <div class="brand"><span>NEON</span> DASH</div>
+    </div>
+    <div class="record-chip">
+      <small>🏆 رکورد برتر</small>
+      <strong id="bestScore">0</strong>
+    </div>
+  </header>
+
+  <section class="stats" aria-label="آمار بازی">
+    <div class="stat"><small>امتیاز</small><strong id="score">0</strong></div>
+    <div class="stat"><small>مسافت</small><strong id="distance">0 m</strong></div>
+    <div class="stat"><small>سکه</small><strong id="coins">0</strong></div>
+    <div class="stat"><small>مرحله</small><strong id="level">1</strong></div>
+  </section>
+
+  <section class="game-frame">
+    <canvas id="game" width="900" height="500" aria-label="محیط بازی نئون دش"></canvas>
+    <div class="overlay" id="startOverlay">
+      <h1>NEON DASH</h1>
+      <p>از مانع‌ها بپر، سکه جمع کن و رکورد خودت را بشکن! هرچه بیشتر دوام بیاوری، سرعت بالاتر می‌رود.</p>
+      <button class="primary" id="startBtn">شروع بازی 🚀</button>
+    </div>
+    <div class="overlay hidden" id="endOverlay">
+      <h1 id="endTitle">پایان بازی</h1>
+      <p id="endText">این بار چند امتیاز گرفتی؟</p>
+      <button class="primary" id="againBtn">دوباره بازی کن ↻</button>
+    </div>
+    <div class="overlay hidden" id="pauseOverlay">
+      <h1>توقف ⏸</h1>
+      <p>نفس تازه کن؛ هر وقت آماده بودی ادامه بده.</p>
+      <button class="primary" id="resumeBtn">ادامه بازی</button>
+    </div>
+  </section>
+
+  <div id="toast">برای پرش، روی صفحه بزن یا دکمهٔ پرش را فشار بده.</div>
+
+  <section class="controls" aria-label="کنترل‌های لمسی">
+    <button class="control-btn" id="jumpBtn"><span>⬆</span> پرش</button>
+    <button class="control-btn" id="dashBtn"><span>⚡</span> جهش سریع</button>
+  </section>
+
+  <div class="action-row">
+    <button id="pauseBtn">⏸ توقف بازی</button>
+    <button id="soundBtn">🔊 صدا: روشن</button>
+    <button id="fullscreenBtn">⛶ تمام‌صفحه</button>
+    <button id="resetBestBtn">پاک‌کردن رکورد</button>
+  </div>
+
+  <section class="info-grid">
+    <div class="info"><b>🟦 مانع‌ها</b><p>از بلوک‌های نئونی بپر؛ برخورد با آن‌ها بازی را تمام می‌کند.</p></div>
+    <div class="info"><b>🟡 سکه‌ها</b><p>سکه‌های شناور را جمع کن و امتیاز بیشتری بگیر.</p></div>
+    <div class="info"><b>⚡ جهش سریع</b><p>با جهش سریع از موقعیت‌های سخت عبور کن؛ این توانایی زمان بازیابی دارد.</p></div>
+  </section>
+
+  <footer class="footer">NEON DASH • یک بازی مستقل HTML • رکورد روی همین مرورگر ذخیره می‌شود</footer>
+</main>
+
+<script>
+(() => {
+  "use strict";
+
+  // ------------------------------------------------------------
+  // NEON DASH: بازی رکوردی مستقل، بدون کتابخانه یا اینترنت
+  // ------------------------------------------------------------
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const $ = (id) => document.getElementById(id);
+
+  const ui = {
+    score: $("score"),
+    distance: $("distance"),
+    coins: $("coins"),
+    level: $("level"),
+    best: $("bestScore"),
+    toast: $("toast"),
+    start: $("startOverlay"),
+    end: $("endOverlay"),
+    pause: $("pauseOverlay"),
+    endTitle: $("endTitle"),
+    endText: $("endText")
+  };
+
+  const W = canvas.width;
+  const H = canvas.height;
+  const groundY = 410;
+  const gravity = 1900;
+
+  let state = "menu";
+  let score = 0;
+  let distance = 0;
+  let coinCount = 0;
+  let best = loadBest();
+  let speed = 330;
+  let elapsed = 0;
+  let lastTime = 0;
+  let spawnTimer = 0;
+  let coinTimer = 0;
+  let shake = 0;
+  let soundEnabled = true;
+  let audioContext = null;
+  let particles = [];
+  let obstacles = [];
+  let coins = [];
+  let stars = [];
+  let floatingTexts = [];
+  let dashCooldown = 0;
+  let dashTime = 0;
+  let animationId = 0;
+
+  const player = {
+    x: 150,
+    y: groundY - 48,
+    w: 36,
+    h: 48,
+    vy: 0,
+    onGround: true,
+    invulnerable: 0,
+    trail: []
+  };
+
+  // ------------------------------------------------------------
+  // ذخیره‌سازی امن رکورد در مرورگر
+  // ------------------------------------------------------------
+  function loadBest() {
+    try {
+      return Number(localStorage.getItem("neonDashBestV1") || 0);
+    } catch (error) {
+      return 0;
+    }
+  }
+
+  function saveBest(value) {
+    try {
+      localStorage.setItem("neonDashBestV1", String(value));
+    } catch (error) {
+      ui.toast.textContent = "ذخیره‌سازی در این حالت مرورگر در دسترس نیست.";
+    }
+  }
+
+  function updateBest() {
+    if (score > best) {
+      best = score;
+      saveBest(best);
+      ui.best.textContent = best;
+      ui.toast.textContent = "🏆 رکورد تازه! ادامه بده!";
+    }
+  }
+
+  // ------------------------------------------------------------
+  // صداهای کوتاه با Web Audio؛ بدون فایل صوتی خارجی
+  // ------------------------------------------------------------
+  function beep(frequency = 440, duration = 0.08, type = "sine", volume = 0.035) {
+    if (!soundEnabled) return;
+    try {
+      audioContext = audioContext || new (window.AudioContext || window.webkitAudioContext)();
+      if (audioContext.state === "suspended") audioContext.resume();
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+      gain.gain.setValueAtTime(volume, audioContext.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + duration);
+    } catch (error) {
+      // اگر صدا پشتیبانی نشود، بازی همچنان کامل اجرا می‌شود.
+    }
+  }
+
+  function soundCoin() {
+    beep(880, 0.06, "triangle", 0.045);
+    window.setTimeout(() => beep(1175, 0.07, "triangle", 0.03), 45);
+  }
+
+  // ------------------------------------------------------------
+  // ساخت ستاره‌های پس‌زمینه
+  // ------------------------------------------------------------
+  function createStars() {
+    stars = [];
+    for (let i = 0; i < 90; i++) {
+      stars.push({
+        x: Math.random() * W,
+        y: Math.random() * (groundY - 30),
+        size: 0.5 + Math.random() * 2,
+        alpha: 0.2 + Math.random() * 0.65,
+        factor: 0.08 + Math.random() * 0.5
+      });
+    }
+  }
+
+  // ------------------------------------------------------------
+  // راه‌اندازی مجدد بازی
+  // ------------------------------------------------------------
+  function resetGame() {
+    score = 0;
+    distance = 0;
+    coinCount = 0;
+    speed = 330;
+    elapsed = 0;
+    spawnTimer = 0.7;
+    coinTimer = 1.4;
+    shake = 0;
+    dashCooldown = 0;
+    dashTime = 0;
+    particles = [];
+    obstacles = [];
+    coins = [];
+    floatingTexts = [];
+    player.x = 150;
+    player.y = groundY - player.h;
+    player.vy = 0;
+    player.onGround = true;
+    player.invulnerable = 0;
+    player.trail = [];
+    updateUI();
+  }
+
+  function startGame() {
+    cancelAnimationFrame(animationId);
+    resetGame();
+    state = "playing";
+    ui.start.classList.add("hidden");
+    ui.end.classList.add("hidden");
+    ui.pause.classList.add("hidden");
+    ui.toast.textContent = "شروع شد! سکه‌ها را بگیر و از مانع‌ها بپر.";
+    lastTime = performance.now();
+    animationId = requestAnimationFrame(loop);
+  }
+
+  function endGame() {
+    state = "ended";
+    updateBest();
+    ui.endTitle.textContent = score >= best && score > 0 ? "رکوردشکن! 🏆" : "پایان بازی";
+    ui.endText.textContent =
+      `امتیاز: ${score} • مسافت: ${Math.floor(distance)} متر • سکه‌ها: ${coinCount}`;
+    ui.end.classList.remove("hidden");
+    ui.toast.textContent = "برای شکستن رکورد، دوباره تلاش کن!";
+    beep(150, 0.25, "sawtooth", 0.04);
+  }
+
+  function pauseGame() {
+    if (state !== "playing") return;
+    state = "paused";
+    ui.pause.classList.remove("hidden");
+    ui.toast.textContent = "بازی متوقف شده است.";
+  }
+
+  function resumeGame() {
+    if (state !== "paused") return;
+    state = "playing";
+    ui.pause.classList.add("hidden");
+    lastTime = performance.now();
+    animationId = requestAnimationFrame(loop);
+  }
+
+  // ------------------------------------------------------------
+  // کنترل پرش و جهش سریع
+  // ------------------------------------------------------------
+  function jump() {
+    if (state === "menu" || state === "ended") {
+      startGame();
+      return;
+    }
+    if (state !== "playing") return;
+    if (player.onGround) {
+      player.vy = -690;
+      player.onGround = false;
+      emitParticles(player.x + player.w / 2, groundY, "#49f5ff", 8);
+      beep(360, 0.07, "triangle", 0.035);
+    } else if (player.vy > 100) {
+      player.vy = -510;
+      beep(420, 0.06, "triangle", 0.03);
+    }
+  }
+
+  function dash() {
+    if (state !== "playing" || dashCooldown > 0) return;
+    dashTime = 0.32;
+    dashCooldown = 2.3;
+    player.invulnerable = 0.36;
+    player.vy = Math.min(player.vy, -180);
+    emitParticles(player.x, player.y + player.h / 2, "#ff4fd8", 20);
+    beep(690, 0.12, "sawtooth", 0.04);
+    ui.toast.textContent = "⚡ جهش سریع فعال شد!";
+  }
+
+  // ------------------------------------------------------------
+  // ایجاد مانع‌ها و سکه‌ها
+  // ------------------------------------------------------------
+  function spawnObstacle() {
+    const tall = Math.random() < 0.3;
+    const width = 25 + Math.random() * 24;
+    const height = tall ? 64 + Math.random() * 32 : 35 + Math.random() * 22;
+    obstacles.push({
+      x: W + 30,
+      y: groundY - height,
+      w: width,
+      h: height,
+      hue: Math.random() < 0.5 ? "#ff4fd8" : "#49f5ff",
+      passed: false
+    });
+  }
+
+  function spawnCoins() {
+    const amount = 3 + Math.floor(Math.random() * 4);
+    const baseY = groundY - 100 - Math.random() * 105;
+    for (let i = 0; i < amount; i++) {
+      coins.push({
+        x: W + 30 + i * 38,
+        y: baseY + Math.sin(i * 0.8) * 18,
+        r: 11,
+        spin: Math.random() * Math.PI * 2,
+        taken: false
+      });
+    }
+  }
+
+  // ------------------------------------------------------------
+  // ذرات نور و نوشته‌های شناور
+  // ------------------------------------------------------------
+  function emitParticles(x, y, color, amount = 12) {
+    for (let i = 0; i < amount; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const force = 40 + Math.random() * 260;
+      particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * force,
+        vy: Math.sin(angle) * force,
+        life: 0.3 + Math.random() * 0.55,
+        maxLife: 0.85,
+        size: 2 + Math.random() * 4,
+        color
+      });
+    }
+  }
+
+  function addFloatingText(x, y, text, color = "#ffe66d") {
+    floatingTexts.push({ x, y, text, color, life: 0.85 });
+  }
+
+  // ------------------------------------------------------------
+  // محاسبه برخوردها
+  // ------------------------------------------------------------
+  function intersects(a, b) {
+    const insetX = 5;
+    const insetY = 4;
+    return (
+      a.x + insetX < b.x + b.w &&
+      a.x + a.w - insetX > b.x &&
+      a.y + insetY < b.y + b.h &&
+      a.y + a.h - insetY > b.y
+    );
+  }
+
+  function collectCoins() {
+    const box = { x: player.x, y: player.y, w: player.w, h: player.h };
+    for (const coin of coins) {
+      if (coin.taken) continue;
+      const dx = player.x + player.w / 2 - coin.x;
+      const dy = player.y + player.h / 2 - coin.y;
+      if (Math.hypot(dx, dy) < coin.r + 25) {
+        coin.taken = true;
+        coinCount += 1;
+        score += 25;
+        emitParticles(coin.x, coin.y, "#ffe66d", 9);
+        addFloatingText(coin.x, coin.y - 10, "+25");
+        soundCoin();
+      }
+    }
+    coins = coins.filter((coin) => !coin.taken && coin.x > -40);
+  }
+
+  function checkObstacles() {
+    const box = { x: player.x, y: player.y, w: player.w, h: player.h };
+    for (const obstacle of obstacles) {
+      if (intersects(box, obstacle) && player.invulnerable <= 0) {
+        emitParticles(player.x + player.w / 2, player.y + player.h / 2, "#ff4fd8", 26);
+        shake = 12;
+        endGame();
+        return;
+      }
+      if (!obstacle.passed && obstacle.x + obstacle.w < player.x) {
+        obstacle.passed = true;
+        score += 10;
+        addFloatingText(player.x, player.y - 10, "+10");
+      }
+    }
+    obstacles = obstacles.filter((obstacle) => obstacle.x + obstacle.w > -50);
+  }
+
+  // ------------------------------------------------------------
+  // بروزرسانی فیزیک و سرعت
+  // ------------------------------------------------------------
+  function update(dt) {
+    elapsed += dt;
+    distance += speed * dt / 24;
+    speed = Math.min(700, 330 + elapsed * 5.4);
+    score += Math.floor(dt * (5 + speed / 100));
+    dashCooldown = Math.max(0, dashCooldown - dt);
+    dashTime = Math.max(0, dashTime - dt);
+    player.invulnerable = Math.max(0, player.invulnerable - dt);
+    shake = Math.max(0, shake - dt * 28);
+
+    player.vy += gravity * dt;
+    player.y += player.vy * dt;
+    if (player.y + player.h >= groundY) {
+      player.y = groundY - player.h;
+      player.vy = 0;
+      player.onGround = true;
+    }
+
+    player.trail.push({ x: player.x, y: player.y, life: 0.22 });
+    player.trail.forEach((part) => part.life -= dt);
+    player.trail = player.trail.filter((part) => part.life > 0);
+
+    spawnTimer -= dt;
+    if (spawnTimer <= 0) {
+      spawnObstacle();
+      spawnTimer = Math.max(0.65, 1.35 - elapsed * 0.008) + Math.random() * 0.55;
+    }
+
+    coinTimer -= dt;
+    if (coinTimer <= 0) {
+      spawnCoins();
+      coinTimer = 1.8 + Math.random() * 1.8;
+    }
+
+    obstacles.forEach((obstacle) => obstacle.x -= speed * dt);
+    coins.forEach((coin) => {
+      coin.x -= speed * dt;
+      coin.spin += dt * 5;
+    });
+
+    particles.forEach((particle) => {
+      particle.x += particle.vx * dt;
+      particle.y += particle.vy * dt;
+      particle.vy += 380 * dt;
+      particle.life -= dt;
+    });
+    particles = particles.filter((particle) => particle.life > 0);
+
+    floatingTexts.forEach((item) => {
+      item.y -= 42 * dt;
+      item.life -= dt;
+    });
+    floatingTexts = floatingTexts.filter((item) => item.life > 0);
+
+    stars.forEach((star) => {
+      star.x -= speed * star.factor * dt;
+      if (star.x < 0) {
+        star.x = W + Math.random() * 30;
+        star.y = Math.random() * (groundY - 30);
+      }
+    });
+
+    collectCoins();
+    checkObstacles();
+    updateUI();
+  }
+
+  function updateUI() {
+    ui.score.textContent = score;
+    ui.distance.textContent = Math.floor(distance) + " m";
+    ui.coins.textContent = coinCount;
+    ui.level.textContent = 1 + Math.floor(distance / 250);
+    ui.best.textContent = best;
+  }
+
+  // ------------------------------------------------------------
+  // ابزارهای رسم گرافیکی
+  // ------------------------------------------------------------
+  function roundedRect(x, y, width, height, radius, fill, stroke) {
+    ctx.beginPath();
+    ctx.roundRect(x, y, width, height, radius);
+    if (fill) {
+      ctx.fillStyle = fill;
+      ctx.fill();
+    }
+    if (stroke) {
+      ctx.strokeStyle = stroke;
+      ctx.stroke();
+    }
+  }
+
+  function drawBackground() {
+    const gradient = ctx.createLinearGradient(0, 0, 0, H);
+    gradient.addColorStop(0, "#080e25");
+    gradient.addColorStop(0.72, "#15133b");
+    gradient.addColorStop(1, "#24103a");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, W, H);
+
+    // خطوط افق و درخشش دوردست
+    const glow = ctx.createRadialGradient(W * 0.72, groundY, 0, W * 0.72, groundY, 400);
+    glow.addColorStop(0, "#4b2c7c55");
+    glow.addColorStop(1, "#4b2c7c00");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
+
+    stars.forEach((star) => {
+      ctx.globalAlpha = star.alpha;
+      ctx.fillStyle = "#c6f9ff";
+      ctx.fillRect(star.x, star.y, star.size, star.size);
+    });
+    ctx.globalAlpha = 1;
+
+    // ساختمان‌های پس‌زمینه
+    for (let i = 0; i < 15; i++) {
+      const width = 32 + (i % 4) * 12;
+      const height = 55 + ((i * 37) % 115);
+      const shift = (elapsed * speed * 0.12) % (W + 100);
+      let x = i * 75 - shift;
+      while (x < -width) x += W + 100;
+      ctx.fillStyle = "#151d42";
+      ctx.fillRect(x, groundY - height, width, height);
+      ctx.fillStyle = "#49f5ff38";
+      for (let wy = groundY - height + 12; wy < groundY - 12; wy += 17) {
+        ctx.fillRect(x + 8, wy, 5, 5);
+        ctx.fillRect(x + 20, wy, 5, 5);
+      }
+    }
+
+    // کف نئونی
+    ctx.fillStyle = "#0b1025";
+    ctx.fillRect(0, groundY, W, H - groundY);
+    ctx.shadowBlur = 18;
+    ctx.shadowColor = "#49f5ff";
+    ctx.strokeStyle = "#49f5ff";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, groundY);
+    ctx.lineTo(W, groundY);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // خطوط کف متحرک
+    const offset = (elapsed * speed * 0.9) % 90;
+    ctx.strokeStyle = "#49f5ff24";
+    ctx.lineWidth = 1;
+    for (let x = -offset; x < W; x += 90) {
+      ctx.beginPath();
+      ctx.moveTo(x, groundY);
+      ctx.lineTo(x - 60, H);
+      ctx.stroke();
+    }
+    for (let y = groundY + 24; y < H; y += 26) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+  }
+
+  function drawPlayer() {
+    player.trail.forEach((part) => {
+      ctx.globalAlpha = part.life * 0.7;
+      ctx.fillStyle = "#49f5ff";
+      ctx.fillRect(part.x - 12, part.y + 8, player.w * 0.65, player.h * 0.65);
+    });
+    ctx.globalAlpha = 1;
+
+    if (player.invulnerable > 0 && Math.floor(elapsed * 24) % 2 === 0) return;
+
+    ctx.save();
+    ctx.shadowBlur = dashTime > 0 ? 30 : 18;
+    ctx.shadowColor = dashTime > 0 ? "#ff4fd8" : "#49f5ff";
+    const body = ctx.createLinearGradient(player.x, player.y, player.x + player.w, player.y + player.h);
+    body.addColorStop(0, "#e7ffff");
+    body.addColorStop(0.35, "#49f5ff");
+    body.addColorStop(1, "#3578ff");
+    roundedRect(player.x, player.y, player.w, player.h, 9, body, "#ffffff");
+    ctx.shadowBlur = 0;
+
+    // چهره شخصیت
+    ctx.fillStyle = "#07132b";
+    roundedRect(player.x + 6, player.y + 12, 24, 12, 5, "#07132b");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(player.x + 10, player.y + 16, 5, 4);
+    ctx.fillRect(player.x + 21, player.y + 16, 5, 4);
+
+    // کفش‌های کوچک
+    ctx.fillStyle = "#ff4fd8";
+    roundedRect(player.x - 2, player.y + player.h - 7, 17, 9, 4, "#ff4fd8");
+    roundedRect(player.x + 20, player.y + player.h - 7, 17, 9, 4, "#ff4fd8");
+    ctx.restore();
+  }
+
+  function drawObstacles() {
+    obstacles.forEach((obstacle) => {
+      ctx.save();
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = obstacle.hue;
+      const gradient = ctx.createLinearGradient(obstacle.x, obstacle.y, obstacle.x + obstacle.w, obstacle.y + obstacle.h);
+      gradient.addColorStop(0, "#ffffff");
+      gradient.addColorStop(0.2, obstacle.hue);
+      gradient.addColorStop(1, "#161a3a");
+      roundedRect(obstacle.x, obstacle.y, obstacle.w, obstacle.h, 5, gradient, obstacle.hue);
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "#ffffff99";
+      ctx.beginPath();
+      ctx.moveTo(obstacle.x + 5, obstacle.y + 8);
+      ctx.lineTo(obstacle.x + obstacle.w - 5, obstacle.y + 8);
+      ctx.stroke();
+      ctx.restore();
+    });
+  }
+
+  function drawCoins() {
+    coins.forEach((coin) => {
+      ctx.save();
+      ctx.translate(coin.x, coin.y);
+      ctx.scale(Math.max(0.25, Math.abs(Math.cos(coin.spin))), 1);
+      ctx.shadowBlur = 16;
+      ctx.shadowColor = "#ffe66d";
+      ctx.fillStyle = "#ffe66d";
+      ctx.beginPath();
+      ctx.arc(0, 0, coin.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "#fff7bd";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.fillStyle = "#93601a";
+      ctx.font = "bold 15px Tahoma";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("$", 0, 1);
+      ctx.restore();
+    });
+  }
+
+  function drawParticles() {
+    particles.forEach((particle) => {
+      ctx.globalAlpha = Math.max(0, particle.life / particle.maxLife);
+      ctx.fillStyle = particle.color;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = particle.color;
+      ctx.beginPath();
+      ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+
+    floatingTexts.forEach((item) => {
+      ctx.globalAlpha = Math.min(1, item.life * 2);
+      ctx.fillStyle = item.color;
+      ctx.font = "bold 20px Tahoma";
+      ctx.textAlign = "center";
+      ctx.fillText(item.text, item.x, item.y);
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  function drawDashMeter() {
+    const x = 22;
+    const y = 22;
+    const width = 145;
+    const height = 9;
+    ctx.fillStyle = "#ffffff20";
+    ctx.fillRect(x, y, width, height);
+    const ready = 1 - dashCooldown / 2.3;
+    ctx.fillStyle = ready >= 1 ? "#ffe66d" : "#ff4fd8";
+    ctx.fillRect(x, y, width * Math.max(0, Math.min(1, ready)), height);
+    ctx.font = "12px Tahoma";
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#dce7ff";
+    ctx.fillText(ready >= 1 ? "DASH READY" : "DASH", x, y + 25);
+  }
+
+  function render() {
+    ctx.save();
+    if (shake > 0) {
+      ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+    }
+    drawBackground();
+    drawCoins();
+    drawObstacles();
+    drawPlayer();
+    drawParticles();
+    drawDashMeter();
+    ctx.restore();
+  }
+
+  // ------------------------------------------------------------
+  // حلقه اصلی بازی با زمان‌بندی مستقل از نرخ فریم
+  // ------------------------------------------------------------
+  function loop(timestamp) {
+    if (state !== "playing") return;
+    const dt = Math.min(0.032, Math.max(0, (timestamp - lastTime) / 1000));
+    lastTime = timestamp;
+    update(dt);
+    render();
+    if (state === "playing") {
+      animationId = requestAnimationFrame(loop);
+    }
+  }
+
+  // ------------------------------------------------------------
+  // رویدادهای صفحه‌کلید، لمس و دکمه‌ها
+  // ------------------------------------------------------------
+  canvas.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    jump();
+  });
+
+  $("startBtn").addEventListener("click", startGame);
+  $("againBtn").addEventListener("click", startGame);
+  $("jumpBtn").addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    jump();
+  });
+  $("dashBtn").addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    dash();
+  });
+  $("pauseBtn").addEventListener("click", pauseGame);
+  $("resumeBtn").addEventListener("click", resumeGame);
+
+  $("soundBtn").addEventListener("click", () => {
+    soundEnabled = !soundEnabled;
+    $("soundBtn").textContent = soundEnabled ? "🔊 صدا: روشن" : "🔇 صدا: خاموش";
+    if (soundEnabled) beep(620, 0.08);
+  });
+
+  $("fullscreenBtn").addEventListener("click", async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+        $("fullscreenBtn").textContent = "⛶ خروج از تمام‌صفحه";
+      } else {
+        await document.exitFullscreen();
+        $("fullscreenBtn").textContent = "⛶ تمام‌صفحه";
+      }
+    } catch (error) {
+      ui.toast.textContent = "تمام‌صفحه در این مرورگر پشتیبانی نمی‌شود.";
+    }
+  });
+
+  document.addEventListener("fullscreenchange", () => {
+    $("fullscreenBtn").textContent = document.fullscreenElement
+      ? "⛶ خروج از تمام‌صفحه"
+      : "⛶ تمام‌صفحه";
+  });
+
+  $("resetBestBtn").addEventListener("click", () => {
+    const confirmed = window.confirm("رکورد ذخیره‌شده پاک شود؟");
+    if (!confirmed) return;
+    best = 0;
+    try {
+      localStorage.removeItem("neonDashBestV1");
+    } catch (error) {
+      // در صورت مسدود بودن ذخیره‌سازی، رکورد فقط در همین اجرا صفر می‌شود.
+    }
+    ui.best.textContent = "0";
+    ui.toast.textContent = "رکورد پاک شد؛ وقت ثبت رکورد تازه است!";
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (["Space", "ArrowUp", "KeyW"].includes(event.code)) {
+      event.preventDefault();
+      if (state === "paused") resumeGame();
+      else jump();
+    }
+    if (["ShiftLeft", "ShiftRight", "KeyX"].includes(event.code)) {
+      event.preventDefault();
+      dash();
+    }
+    if (event.code === "Escape" && state === "playing") {
+      pauseGame();
+    }
+    if (event.code === "KeyP") {
+      if (state === "playing") pauseGame();
+      else if (state === "paused") resumeGame();
+    }
+  });
+
+  // وقتی بازیکن از تب خارج شد، بازی خودکار مکث می‌کند.
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && state === "playing") pauseGame();
+  });
+
+  // ------------------------------------------------------------
+  // شروع با صحنه نمایشی
+  // ------------------------------------------------------------
+  createStars();
+  ui.best.textContent = best;
+  resetGame();
+  state = "menu";
+  render();
+})();
+</script>
+</body>
+</html>
